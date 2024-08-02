@@ -35,7 +35,6 @@ func main() {
 	case "list-waf-policies":
 
 		awaf.ListPolicies()
-		os.Exit(0)
 
 	case "list-attack-signatures":
 
@@ -50,8 +49,6 @@ func main() {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		os.Exit(0)
 
 	case "print-enforcement-summary":
 

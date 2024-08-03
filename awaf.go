@@ -386,10 +386,6 @@ func (a AWAFSystem) PrintSignaturesEnforcementReadinessSummaryAllPolicies() erro
 
 func (a AWAFSystem) EnforceSignaturesReadyToBeEnforced(policyName string) error {
 
-	device := a.device
-	username := a.username
-	password := a.password
-
 	if a.PolicyExists(policyName) == false {
 		errormsg := fmt.Sprintf("Policy '%s' does not exist.", policyName)
 		return errors.New(errormsg)
@@ -407,11 +403,11 @@ func (a AWAFSystem) EnforceSignaturesReadyToBeEnforced(policyName string) error 
 		return nil
 	}
 
-	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(username+":"+password))
+	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(a.username+":"+a.password))
 
 	asmFilter := "hasSuggestions+eq+false+AND+wasUpdatedWithinEnforcementReadinessPeriod+eq+false+and+performStaging+eq+true"
 
-	url := "https://" + device + "/mgmt/tm/asm/policies/" + policy.id + "/signatures?$select=&$filter=" + asmFilter
+	url := "https://" + a.device + "/mgmt/tm/asm/policies/" + policy.id + "/signatures?$select=&$filter=" + asmFilter
 
 	data := map[string]any{
 		"performStaging": false,

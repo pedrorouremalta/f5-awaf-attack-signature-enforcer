@@ -58,7 +58,7 @@ export BIGIP_PASSWORD="admin"
 
 ### Listing WAF policies
 
-To list all WAF policies on the system, use the action *list-waf-policies*:
+To list all WAF policies on the system, run:
 
 ```
 ./f5-awaf-attack-signature-enforcer -action list-waf-policies
@@ -74,7 +74,7 @@ policy                         id                        enforcementMode
 
 ### Printing the Signature Enforcement Readiness Summary
 
-To print the *Signature Enforcement Readiness Summary* for all WAF policies, use the command below:
+To print the *Signature Enforcement Readiness Summary* for all WAF policies, run:
 
 ```
 ./f5-awaf-attack-signature-enforcer -action print-enforcement-summary
@@ -88,15 +88,88 @@ Policy                         | Total    | Not Enforced | Not Enforced (Have Su
 /Common/asmpolicy_app3         | 3125     | 3125         | 0                                | 0                    | 0        | 0                             
 ```
 
-To list all attack signatures for a specific WAF policy, use the command below: 
+Or to print the *Signature Enforcement Readiness Summary* for a specific WAF policy, run:
+
+```
+./f5-awaf-attack-signature-enforcer -action print-enforcement-summary -policy /Common/asmpolicy_app1
+```
+```
+Total    | Not Enforced | Not Enforced (Have Suggestions)  | Ready To Be Enforced | Enforced | Enforced (Have Suggestions)   
+2414     | 2410         | 3                                | 2407                 | 4        | 1     
+```
+
+### Listing Attack Signatures
+
+To list **all** attack signatures for a specific WAF policy, run: 
 
 ```
 ./f5-awaf-attack-signature-enforcer -action list-attack-signatures -policy /Common/asmpolicy_app1
 ```
 ```
 name                                               id                   learn           alarm           block           status                   
-"sleep" injection attempt (URI)                    200104718            true            true            true            enforced                 
-"sleep" injection attempt (Header)                 200104717            true            true            true            enforced                 
-"sleep" injection attempt (Parameter)              200104716            true            true            true            enforced
+"sleep" injection attempt (URI)                    200104718            true            true            true            ready to be enforced     
+"sleep" injection attempt (Header)                 200104717            true            true            true            ready to be enforced     
+"sleep" injection attempt (Parameter)              200104716            true            true            true            ready to be enforced  
 <full output omitted>
 ```
+
+To list all attack signature with a specific status, use the command-line option *-sigstatus*. 
+
+For example, to list all attack signatures with a status of **not enforced (has suggestions)**, run:
+
+```
+./f5-awaf-attack-signature-enforcer -action list-attack-signatures -policy /Common/asmpolicy_app1 -sigstatus "not
+ enforced (has suggestions)"
+ ```
+ ```
+name                                               id                   learn           alarm           block           status                   
+<script>alert(1);</script> (Parameter)             200101609            true            true            true            not enforced (has suggestions)
+XSS script tag end (Parameter) (2)                 200001475            true            true            true            not enforced (has suggestions)
+document.cookie (Parameter)                        200000157            true            true            true            not enforced (has suggestions)
+```
+
+To list all attack signatures with a status of **enforced**, run:
+
+```
+./f5-awaf-attack-signature-enforcer -action list-attack-signatures -policy /Common/asmpolicy_app1 -sigstatus "enforced"
+```
+```
+name                                               id                   learn           alarm           block           status                   
+" src http: (Header)                               200101559            true            true            true            enforced                 
+" src http: (Parameter)                            200101558            true            true            true            enforced                 
+"/.ftpconfig" access                               200010137            true            true            true            enforced            
+```
+
+Or to list all attack signatures with a status of **enforced (has suggestions)**, run:
+
+```
+./f5-awaf-attack-signature-enforcer -action list-attack-signatures -policy /Common/asmpolicy_app1 -sigstatus "enforced (has suggestions)"
+```
+```
+name                                               id                   learn           alarm           block           status                   
+XSS script tag (Parameter)                         200000098            true            true            true            enforced (has suggestions)
+```
+
+### Enforcing Attack Signatures Ready To be Enforced
+
+To enforce all attack signatures which are **ready to be enforced** for a specific WAF policy, run:
+
+```
+./f5-awaf-attack-signature-enforcer -action enforce-ready-signatures -policy /Common/asmpolicy_app1
+```
+```
+2407 signatures enforced.
+Running an 'apply-policy' operation on the policy '/Common/asmpolicy_app1'.
+The 'apply-policy' task completed successfully.
+```
+
+To confirm that all **ready to be enforced** attack signatures were enforced, run:
+
+```
+./f5-awaf-attack-signature-enforcer -action print-enforcement-summary -policy /Common/asmpolicy_app1
+```
+```
+Total    | Not Enforced | Not Enforced (Have Suggestions)  | Ready To Be Enforced | Enforced | Enforced (Have Suggestions)   
+2414     | 3            | 3                                | 0                    | 2411     | 1                             
+```
+

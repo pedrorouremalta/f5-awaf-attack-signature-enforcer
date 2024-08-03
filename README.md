@@ -15,17 +15,17 @@ It can be used to:
 
 |  Variable Name  | Mandatory |          Description            |
 |-----------------|-----------|---------------------------------|
-| `BIGIP_ADDRESS` |    Yes    | BIGIP IP address or hostname.   |
-| `BIGIP_USERNAME`|    Yes    | BIGIP admin username.           |
-| `BIGIP_PASSWORD`|    Yes    | BIGIP admin password.           |
+| `BIGIP_ADDRESS` |    Yes    | BIG-IP IP address or hostname.   |
+| `BIGIP_USERNAME`|    Yes    | BIG-IP admin username.           |
+| `BIGIP_PASSWORD`|    Yes    | BIG-IP admin password.           |
 
 ### Command-line Options
 
 |    Option   | Mandatory |        Default       |         Description            |
 |-------------|-----------|----------------------|--------------------------------|
-| `-action`   |    Yes    | *list-waf-policies*  | Specify the action which will be performed. Allowed values are: *list-waf-policies*,*list-attack-signatures*, *print-enforcement-summary*, and *enforce-ready-signatures*. |
-| `-policy`   |    No     |                      | Specify the WAF policy in whch the *action* will be applied. Mandatory for the actions *list-attack-signatures* and *enforce-ready-signatures*. Optional for the action *print-enforcement-summary* |
-| `-sigstatus`|    No     |        *all*         |Specify a *status* filter when listing attack signatures. This option is optional and the allowed values are: *all*, *ready to be enforced*, *not enforced (has suggestions)*, *not enforced*, *enforced (has suggestions)*, and *enforced*. |
+| `-action`   |    Yes    | *list-waf-policies*  | Specify the action which will be performed. Allowed values are: **list-waf-policies**, **list-attack-signatures**, **print-enforcement-summary**, and **enforce-ready-signatures**. |
+| `-policy`   |    No     |                      | Specify the WAF policy in which the *action* will be applied. Mandatory for the actions *list-attack-signatures* and *enforce-ready-signatures*. Optional for the action *print-enforcement-summary* |
+| `-sigstatus`|    No     |        *all*         |Specify a *status* filter when listing attack signatures. This option is optional and the allowed values are: **all**, **ready to be enforced**, **not enforced (has suggestions)**, **not enforced**, **enforced (has suggestions)**, and **enforced**. |
 
 ### Supported Actions
 

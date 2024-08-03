@@ -19,13 +19,22 @@ It can be used to:
 | `BIGIP_USERNAME`|    Yes    | BIGIP admin username.           |
 | `BIGIP_PASSWORD`|    Yes    | BIGIP admin password.           |
 
-### Command-line options
+### Command-line Options
 
 |    Option   | Mandatory |        Default       |         Description            |
 |-------------|-----------|----------------------|--------------------------------|
 | `-action`   |    Yes    | *list-waf-policies*  | Specify the action which will be performed. Allowed values are: *list-waf-policies*,*list-attack-signatures*, *print-enforcement-summary*, and *enforce-ready-signatures*. |
 | `-policy`   |    No     |                      | Specify the WAF policy in whch the *action* will be applied. Mandatory for the actions *list-attack-signatures* and *enforce-ready-signatures*. Optional for the action *print-enforcement-summary* |
 | `-sigstatus`|    No     |        *all*         |Specify a *status* filter when listing attack signatures. This option is optional and the allowed values are: *all*, *ready to be enforced*, *not enforced (has suggestions)*, *not enforced*, *enforced (has suggestions)*, and *enforced*. |
+
+### Supported Actions
+
+|            action          |         Description            |
+|----------------------------|--------------------------------|
+| `list-waf-policies`        | List all WAF policies on the System |
+| `list-attack-signatures`   | List all attack signatures for a specific WAF policy. The *-policy* is mandatory. |
+| `print-enforcement-summary`| Print the *Signatures Enforcement Readiness Summary* for all WAF policies on the system or for a specific WAF policy (option *-policy*). |
+| `enforce-ready-signatures` | Enforce all attack signature with a *'ready to enforce'* status for a specific WAF policy (option *-policy*).|
 
 ## Using
 
@@ -63,7 +72,21 @@ policy                         id                        enforcementMode
 /Common/asmpolicy_app3         XWPS7guLOaacZKlMlJWpGQ    blocking            
 ```
 
-### Listing Attack Signatures
+### Printing the Signature Enforcement Readiness Summary
+
+To print the *Signature Enforcement Readiness Summary* for all WAF policies, use the command below:
+
+```
+./f5-awaf-attack-signature-enforcer -action print-enforcement-summary
+```
+```
+Policy                         | Total    | Not Enforced | Not Enforced (Have Suggestions)  | Ready To Be Enforced | Enforced | Enforced (Have Suggestions)   
+/Common/asmpolicy_app2         | 2414     | 2412         | 1                                | 2411                 | 2        | 2                             
+/Common/asmpolicy_app1         | 2414     | 2410         | 3                                | 2407                 | 4        | 1                             
+/Common/asmpolicy_app5         | 3600     | 3600         | 0                                | 0                    | 0        | 0                             
+/Common/asmpolicy_app4         | 3679     | 3679         | 0                                | 0                    | 0        | 0                             
+/Common/asmpolicy_app3         | 3125     | 3125         | 0                                | 0                    | 0        | 0                             
+```
 
 To list all attack signatures for a specific WAF policy, use the command below: 
 

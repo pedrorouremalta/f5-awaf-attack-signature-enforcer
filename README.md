@@ -62,3 +62,18 @@ policy                         id                        enforcementMode
 /Common/asmpolicy_app4         zOVIyaxoJVb1Talpn1aedA    transparent         
 /Common/asmpolicy_app3         XWPS7guLOaacZKlMlJWpGQ    blocking            
 ```
+
+### Listing Attack Signatures
+
+To list all attack signatures for a specific WAF policy, use the command below: 
+
+```
+./f5-awaf-attack-signature-enforcer -action list-attack-signatures -policy /Common/asmpolicy_app1
+```
+```
+name                                               id                   learn           alarm           block           status                   
+"sleep" injection attempt (URI)                    200104718            true            true            true            enforced                 
+"sleep" injection attempt (Header)                 200104717            true            true            true            enforced                 
+"sleep" injection attempt (Parameter)              200104716            true            true            true            enforced
+<full output omitted>
+```

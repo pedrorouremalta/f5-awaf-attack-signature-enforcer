@@ -29,10 +29,36 @@ It can be used to:
 
 ## Using
 
-### Exporting the required environment variables
+### Building
+
+To build the tool, use the command below:
+
+```
+go build -o f5-awaf-attack-signature-enforcer main.go awaf.go args.go
+```
+
+### Exporting Environment Variables
+
+Before using this tool, it is needed to export a few required environment variables:
 
 ```
 export BIGIP_ADDRESS="X.X.X.X"
 export BIGIP_USERNAME="admin"
 export BIGIP_PASSWORD="admin"
+```
+
+### Listing WAF policies
+
+To list all WAF policies on the system, use the action *list-waf-policies*:
+
+```
+./f5-awaf-attack-signature-enforcer -action list-waf-policies
+```
+```
+policy                         id                        enforcementMode     
+/Common/asmpolicy_app2         sgV4mAIDujF5f5LMoBJbUQ    blocking            
+/Common/asmpolicy_app1         EpjFk_R-Eyi7fOxpy4i6BA    blocking            
+/Common/asmpolicy_app5         rBKYCfVhrFtCR-f-ARf2Vw    transparent         
+/Common/asmpolicy_app4         zOVIyaxoJVb1Talpn1aedA    transparent         
+/Common/asmpolicy_app3         XWPS7guLOaacZKlMlJWpGQ    blocking            
 ```

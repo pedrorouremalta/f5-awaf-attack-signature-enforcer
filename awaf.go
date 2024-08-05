@@ -369,7 +369,7 @@ func (p Policy) GetSignatureEnforcementReadinessSummary() (EnforcementReadinessS
 	return summary, nil
 }
 
-func (p *Policy) PrintSignaturesEnforcementReadinessSummary() error {
+func (p Policy) PrintSignaturesEnforcementReadinessSummary() error {
 
 	summary, err := p.GetSignatureEnforcementReadinessSummary()
 	if err != nil {
@@ -414,7 +414,7 @@ func (a AWAFSystem) PrintSignaturesEnforcementReadinessSummaryAllPolicies() erro
 	return nil
 }
 
-func (p *Policy) EnforceSignaturesReadyToBeEnforced() error {
+func (p Policy) EnforceSignaturesReadyToBeEnforced() error {
 
 	if p.signatures == nil {
 		errormsg := fmt.Sprintf("Attack signatures not found/loaded.")
@@ -506,7 +506,7 @@ func (p *Policy) EnforceSignaturesReadyToBeEnforced() error {
 	return nil
 }
 
-func (p *Policy) ApplyPolicy() error {
+func (p Policy) ApplyPolicy() error {
 
 	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(p.awaf.username+":"+p.awaf.password))
 

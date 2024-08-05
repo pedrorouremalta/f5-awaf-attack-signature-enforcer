@@ -24,7 +24,7 @@ func main() {
 
 	awaf := NewAWAFSystem(args.device, args.username, args.password)
 
-	err = awaf.GetPolicies()
+	err = awaf.LoadPolicies()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -38,13 +38,19 @@ func main() {
 
 	case "list-attack-signatures":
 
-		err = awaf.LoadAttackSignaruresByPolicyName(args.policy)
+		policy, err := awaf.GetPolicy(args.policy)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		err = awaf.ListAttackSignaturesByPolicyName(args.policy, args.sigstatus)
+		err = policy.LoadAttackSignatures()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		err = policy.ListAttackSignatures(args.sigstatus)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -60,17 +66,27 @@ func main() {
 				os.Exit(1)
 			}
 
-			awaf.PrintSignaturesEnforcementReadinessSummaryAllPolicies()
-
-		} else {
-
-			err = awaf.LoadAttackSignaruresByPolicyName(args.policy)
+			err = awaf.PrintSignaturesEnforcementReadinessSummaryAllPolicies()
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
 
-			err = awaf.PrintSignaturesEnforcementReadinessSummaryByPolicyName(args.policy)
+		} else {
+
+			policy, err := awaf.GetPolicy(args.policy)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			err = policy.LoadAttackSignatures()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			err = policy.PrintSignaturesEnforcementReadinessSummary()
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -80,13 +96,19 @@ func main() {
 
 	case "enforce-ready-signatures":
 
-		err = awaf.LoadAttackSignaruresByPolicyName(args.policy)
+		policy, err := awaf.GetPolicy(args.policy)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 
-		err = awaf.EnforceSignaturesReadyToBeEnforced(args.policy)
+		err = policy.LoadAttackSignatures()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		err = policy.EnforceSignaturesReadyToBeEnforced()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

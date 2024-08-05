@@ -16,12 +16,13 @@ type AWAFSystem struct {
 	device   string
 	username string
 	password string
-	policies map[string]Policy
+	policies map[string]*Policy
 }
 
 type Policy struct {
 	id              string
 	enforcementMode string
+	awaf            *AWAFSystem
 	signatures      []Signature
 }
 
@@ -51,11 +52,11 @@ func NewAWAFSystem(device, username, password string) *AWAFSystem {
 		device:   device,
 		username: username,
 		password: password,
-		policies: make(map[string]Policy),
+		policies: make(map[string]*Policy),
 	}
 }
 
-func (a *AWAFSystem) GetPolicies() error {
+func (a *AWAFSystem) LoadPolicies() error {
 
 	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(a.username+":"+a.password))
 
@@ -114,7 +115,7 @@ func (a *AWAFSystem) GetPolicies() error {
 				fullPath := policy["fullPath"].(string)
 				id := policy["id"].(string)
 				enforcementMode := policy["enforcementMode"].(string)
-				a.policies[fullPath] = Policy{id: id, enforcementMode: enforcementMode}
+				a.policies[fullPath] = &Policy{id: id, enforcementMode: enforcementMode, awaf: a}
 			}
 		}
 	}
@@ -139,22 +140,37 @@ func (a *AWAFSystem) ListPolicies() {
 	}
 }
 
-func (a *AWAFSystem) LoadAttackSignaruresByPolicyName(policyName string) error {
+func (a AWAFSystem) PolicyExists(policyName string) bool {
+
+	_, exists := a.policies[policyName]
+	if !exists {
+		return false
+	}
+
+	return true
+}
+
+func (a *AWAFSystem) GetPolicy(policyName string) (*Policy, error) {
 
 	if a.PolicyExists(policyName) == false {
-		errormsg := fmt.Sprintf("Policy '%s' does not exist.", policyName)
-		return errors.New(errormsg)
+		errormsg := "Policy not found."
+		return &Policy{}, errors.New(errormsg)
 	}
 
 	policy := a.policies[policyName]
 
-	policy.signatures = policy.signatures[:0]
+	return policy, nil
+}
 
-	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(a.username+":"+a.password))
+func (p *Policy) LoadAttackSignatures() error {
+
+	p.signatures = p.signatures[:0]
+
+	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(p.awaf.username+":"+p.awaf.password))
 
 	asmSelect := "signatureReference,alarm,block,learn,performStaging,hasSuggestions,wasUpdatedWithinEnforcementReadinessPeriod,isPriorRuleEnforced"
 
-	url := "https://" + a.device + "/mgmt/tm/asm/policies/" + policy.id + "/signatures?$select=" + asmSelect
+	url := "https://" + p.awaf.device + "/mgmt/tm/asm/policies/" + p.id + "/signatures?$select=" + asmSelect
 
 	// create an HTTP GET request
 	req, err := http.NewRequest("GET", url, nil)
@@ -220,7 +236,7 @@ func (a *AWAFSystem) LoadAttackSignaruresByPolicyName(policyName string) error {
 				hasSuggestions = signature["hasSuggestions"].(bool)
 				wasUpdatedWithinEnforcementReadinessPeriod = signature["wasUpdatedWithinEnforcementReadinessPeriod"].(bool)
 				isPriorRuleEnforced = signature["isPriorRuleEnforced"].(bool)
-				policy.signatures = append(policy.signatures, Signature{
+				p.signatures = append(p.signatures, Signature{
 					name:           name,
 					id:             id,
 					alarm:          alarm,
@@ -235,15 +251,13 @@ func (a *AWAFSystem) LoadAttackSignaruresByPolicyName(policyName string) error {
 		}
 	}
 
-	a.policies[policyName] = policy
-
 	return nil
 }
 
 func (a *AWAFSystem) LoadAttackSignaruresAllPolicies() error {
 
-	for policyName := range a.policies {
-		err := a.LoadAttackSignaruresByPolicyName(policyName)
+	for _, policy := range a.policies {
+		err := policy.LoadAttackSignatures()
 		if err != nil {
 			return (err)
 		}
@@ -252,32 +266,9 @@ func (a *AWAFSystem) LoadAttackSignaruresAllPolicies() error {
 	return nil
 }
 
-func (a AWAFSystem) PolicyExists(policyName string) bool {
+func (p *Policy) ListAttackSignatures(sigstatus string) error {
 
-	_, exists := a.policies[policyName]
-	if !exists {
-		return false
-	}
-
-	/*for policy := range a.policies {
-		if policy == policyName {
-			return true
-		}
-	} */
-
-	return true
-}
-
-func (a AWAFSystem) ListAttackSignaturesByPolicyName(policyName string, sigstatus string) error {
-
-	if a.PolicyExists(policyName) == false {
-		errormsg := fmt.Sprintf("Policy '%s' does not exist.", policyName)
-		return errors.New(errormsg)
-	}
-
-	policy := a.policies[policyName]
-
-	if policy.signatures == nil {
+	if p.signatures == nil {
 		errormsg := fmt.Sprintf("Attack signatures not found/loaded.")
 		return errors.New(errormsg)
 	}
@@ -289,7 +280,7 @@ func (a AWAFSystem) ListAttackSignaturesByPolicyName(policyName string, sigstatu
 
 	fmt.Printf("%-50s %-20s %-15s %-15s %-15s %-25s\n", "name", "id", "learn", "alarm", "block", "status")
 
-	for _, signature := range policy.signatures {
+	for _, signature := range p.signatures {
 
 		name := signature.name
 		id := signature.id
@@ -332,16 +323,55 @@ func (a AWAFSystem) ListAttackSignaturesByPolicyName(policyName string, sigstatu
 	return nil
 }
 
-func (a AWAFSystem) PrintSignaturesEnforcementReadinessSummaryByPolicyName(policyName string) error {
+func (p Policy) GetSignatureEnforcementReadinessSummary() (EnforcementReadinessSummary, error) {
 
-	if a.PolicyExists(policyName) == false {
-		errormsg := fmt.Sprintf("Policy '%s' does not exist.", policyName)
-		return errors.New(errormsg)
+	if p.signatures == nil {
+		errormsg := fmt.Sprintf("Attack signatures not found/loaded.")
+		return EnforcementReadinessSummary{}, errors.New(errormsg)
 	}
 
-	policy := a.policies[policyName]
+	total := len(p.signatures)
+	notEnforced := 0
+	notEnforcedAndHaveSuggestions := 0
+	readyToBeEnforced := 0
+	enforced := 0
+	enforcedAndHaveSuggestions := 0
 
-	summary, err := policy.GetSignatureEnforcementReadinessSummary()
+	for _, signature := range p.signatures {
+
+		if signature.performStaging {
+			notEnforced += 1
+			if signature.hasSuggestions {
+				notEnforcedAndHaveSuggestions += 1
+			} else {
+				if !signature.wasUpdatedWithinEnforcementReadinessPeriod {
+					readyToBeEnforced += 1
+				}
+			}
+		} else {
+			enforced += 1
+			if signature.hasSuggestions {
+				enforcedAndHaveSuggestions += 1
+			}
+		}
+
+	}
+
+	summary := EnforcementReadinessSummary{
+		total:                         total,
+		notEnforced:                   notEnforced,
+		notEnforcedAndHaveSuggestions: notEnforcedAndHaveSuggestions,
+		readyToBeEnforced:             readyToBeEnforced,
+		enforced:                      enforced,
+		enforcedAndHaveSuggestions:    enforcedAndHaveSuggestions,
+	}
+
+	return summary, nil
+}
+
+func (p *Policy) PrintSignaturesEnforcementReadinessSummary() error {
+
+	summary, err := p.GetSignatureEnforcementReadinessSummary()
 	if err != nil {
 		return err
 	}
@@ -384,16 +414,14 @@ func (a AWAFSystem) PrintSignaturesEnforcementReadinessSummaryAllPolicies() erro
 	return nil
 }
 
-func (a AWAFSystem) EnforceSignaturesReadyToBeEnforced(policyName string) error {
+func (p *Policy) EnforceSignaturesReadyToBeEnforced() error {
 
-	if a.PolicyExists(policyName) == false {
-		errormsg := fmt.Sprintf("Policy '%s' does not exist.", policyName)
+	if p.signatures == nil {
+		errormsg := fmt.Sprintf("Attack signatures not found/loaded.")
 		return errors.New(errormsg)
 	}
 
-	policy := a.policies[policyName]
-
-	summary, err := policy.GetSignatureEnforcementReadinessSummary()
+	summary, err := p.GetSignatureEnforcementReadinessSummary()
 	if err != nil {
 		return err
 	}
@@ -403,11 +431,11 @@ func (a AWAFSystem) EnforceSignaturesReadyToBeEnforced(policyName string) error 
 		return nil
 	}
 
-	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(a.username+":"+a.password))
+	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(p.awaf.username+":"+p.awaf.password))
 
 	asmFilter := "hasSuggestions+eq+false+AND+wasUpdatedWithinEnforcementReadinessPeriod+eq+false+and+performStaging+eq+true"
 
-	url := "https://" + a.device + "/mgmt/tm/asm/policies/" + policy.id + "/signatures?$select=&$filter=" + asmFilter
+	url := "https://" + p.awaf.device + "/mgmt/tm/asm/policies/" + p.id + "/signatures?$select=&$filter=" + asmFilter
 
 	data := map[string]any{
 		"performStaging": false,
@@ -470,7 +498,7 @@ func (a AWAFSystem) EnforceSignaturesReadyToBeEnforced(policyName string) error 
 	totalItems := result["totalItems"].(float64)
 	fmt.Printf("%d signatures enforced.\n", int(totalItems))
 
-	err = a.ApplyPolicy(policyName)
+	err = p.ApplyPolicy()
 	if err != nil {
 		return err
 	}
@@ -478,22 +506,15 @@ func (a AWAFSystem) EnforceSignaturesReadyToBeEnforced(policyName string) error 
 	return nil
 }
 
-func (a AWAFSystem) ApplyPolicy(policyName string) error {
+func (p *Policy) ApplyPolicy() error {
 
-	if a.PolicyExists(policyName) == false {
-		errormsg := fmt.Sprintf("Policy '%s' does not exist.", policyName)
-		return errors.New(errormsg)
-	}
+	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(p.awaf.username+":"+p.awaf.password))
 
-	policy := a.policies[policyName]
-
-	basic_auth_header := "Basic " + base64.StdEncoding.EncodeToString([]byte(a.username+":"+a.password))
-
-	url := "https://" + a.device + "/mgmt/tm/asm/tasks/apply-policy"
+	url := "https://" + p.awaf.device + "/mgmt/tm/asm/tasks/apply-policy"
 
 	data := map[string]interface{}{
 		"policyReference": map[string]string{
-			"link": "https://" + a.device + "/mgmt/tm/asm/policies/" + policy.id,
+			"link": "https://" + p.awaf.device + "/mgmt/tm/asm/policies/" + p.id,
 		},
 	}
 
@@ -523,7 +544,7 @@ func (a AWAFSystem) ApplyPolicy(policyName string) error {
 	client := &http.Client{Transport: tr}
 
 	// running a 'apply-policy' operation to apply the policy changes
-	fmt.Printf("Running an 'apply-policy' operation on the policy '%s'.\n", policyName)
+	fmt.Printf("Running an 'apply-policy' operation on the policy.\n")
 
 	// perform the request
 	resp, err := client.Do(req)
@@ -562,7 +583,7 @@ func (a AWAFSystem) ApplyPolicy(policyName string) error {
 		return errors.New(errormsg)
 	}
 
-	url = "https://" + a.device + "/mgmt/tm/asm/tasks/apply-policy/" + task_id
+	url = "https://" + p.awaf.device + "/mgmt/tm/asm/tasks/apply-policy/" + task_id
 
 	interval := 1 * time.Second
 	timeout := 5 * time.Minute
@@ -634,52 +655,6 @@ func (a AWAFSystem) ApplyPolicy(policyName string) error {
 	fmt.Println("The 'apply-policy' task completed successfully.")
 
 	return nil
-}
-
-func (p Policy) GetSignatureEnforcementReadinessSummary() (EnforcementReadinessSummary, error) {
-
-	if p.signatures == nil {
-		errormsg := fmt.Sprintf("Attack signatures not found/loaded.")
-		return EnforcementReadinessSummary{}, errors.New(errormsg)
-	}
-
-	total := len(p.signatures)
-	notEnforced := 0
-	notEnforcedAndHaveSuggestions := 0
-	readyToBeEnforced := 0
-	enforced := 0
-	enforcedAndHaveSuggestions := 0
-
-	for _, signature := range p.signatures {
-
-		if signature.performStaging {
-			notEnforced += 1
-			if signature.hasSuggestions {
-				notEnforcedAndHaveSuggestions += 1
-			} else {
-				if !signature.wasUpdatedWithinEnforcementReadinessPeriod {
-					readyToBeEnforced += 1
-				}
-			}
-		} else {
-			enforced += 1
-			if signature.hasSuggestions {
-				enforcedAndHaveSuggestions += 1
-			}
-		}
-
-	}
-
-	summary := EnforcementReadinessSummary{
-		total:                         total,
-		notEnforced:                   notEnforced,
-		notEnforcedAndHaveSuggestions: notEnforcedAndHaveSuggestions,
-		readyToBeEnforced:             readyToBeEnforced,
-		enforced:                      enforced,
-		enforcedAndHaveSuggestions:    enforcedAndHaveSuggestions,
-	}
-
-	return summary, nil
 }
 
 func sigstatusIsAllowed(sigstatus string) bool {

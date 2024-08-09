@@ -72,7 +72,7 @@ policy                         id                        enforcementMode
 /Common/asmpolicy_app1         EpjFk_R-Eyi7fOxpy4i6BA    blocking                      
 ```
 
-### Printing the Signature Enforcement Readiness Summary
+### Printing the Signatures Enforcement Readiness Summary
 
 To print the *Signatures Enforcement Readiness Summary* for all WAF policies, run:
 
